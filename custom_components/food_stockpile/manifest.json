@@ -1,0 +1,10 @@
+{
+    "domain": "food_stockpile",
+    "name": "Food Stockpile",
+    "version": "1.0.0",
+    "documentation": "https://example.com",
+    "requirements": [],
+    "dependencies": [],
+    "codeowners": []
+  }
+  
