@@ -1,0 +1,10 @@
+{
+  "domain": "pantry",
+  "name": "Pantry",
+  "version": "1.0.5",
+  "documentation": "https://github.com/your_username/pantry",
+  "dependencies": [],
+  "codeowners": ["@your_username"],
+  "requirements": [],
+  "config_flow": true
+}
