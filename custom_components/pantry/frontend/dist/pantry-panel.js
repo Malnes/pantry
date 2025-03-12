@@ -1,65 +1,100 @@
-// Add these AT THE TOP of pantry-panel.js
-import { LitElement, html, css } from 'https://unpkg.com/lit@2.6.1/index.js?module';
-import { mdiAlert, mdiFoodDrumstick, mdiPlus, mdiDelete, mdiPencil } from 'https://unpkg.com/@mdi/js@6.5.95/mdi.js?module';
-
-// Material Web Components imports
-import '@material/mwc-button';
-import '@material/mwc-dialog';
-import '@material/mwc-fab';
-import '@material/mwc-icon-button';
-import '@material/mwc-textfield';
-
-export function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString(undefined, { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  });
-}
+import { LitElement, html, css } from 'lit';
+import '@material/web/button/text-button.js';
+import '@material/web/dialog/dialog.js';
+import '@material/web/textfield/outlined-text-field.js';
+import '@material/web/datepicker/date-picker.js';
 
 class PantryPanel extends LitElement {
   static properties = {
+    hass: {},
     items: { type: Array },
-    alerts: { type: Object },
-    activeTab: { type: String },
-    editItem: { type: Object },
-    showDialog: { type: Boolean }
+    _activeTab: { type: Number },
+    _editIndex: { type: Number },
+    _showDialog: { type: Boolean },
+    _dialogType: { type: String },
+    _formData: { type: Object }
   };
 
   static styles = css`
     :host {
-      padding: 16px;
       display: block;
+      padding: 16px;
     }
-    .tab-content {
-      margin-top: 16px;
-    }
-    .grid {
+    
+    .container {
       display: grid;
       gap: 16px;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     }
-    .card {
+    
+    .item-card {
       padding: 16px;
       border-radius: 8px;
       background: var(--card-background-color);
       box-shadow: var(--box-shadow);
     }
-    .expiration-list {
+    
+    .expiration-dates {
       margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
     }
-    .alert {
-      color: var(--error-color);
+    
+    .date {
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: var(--warning-color);
+      font-size: 0.8em;
     }
-    .fab {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
+    
+    .actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
     }
+    
     @media (max-width: 600px) {
-      .grid {
+      .container {
         grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Dialog styles */
+    md-dialog {
+      --md-dialog-container-color: var(--card-background-color);
+      --md-dialog-headline-color: var(--primary-text-color);
+    }
+
+    /* Add these to the styles in pantry-panel.js */
+    .warning {
+      color: var(--error-color);
+      font-weight: bold;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .date.warning {
+      background: var(--error-color);
+      color: white;
+    }
+
+    @media (max-width: 480px) {
+      :host {
+        padding: 8px;
+      }
+      
+      .item-card {
+        padding: 12px;
+      }
+      
+      md-dialog {
+        --md-dialog-container-max-inline-size: 100vw;
       }
     }
   `;
@@ -67,149 +102,179 @@ class PantryPanel extends LitElement {
   constructor() {
     super();
     this.items = [];
-    this.alerts = { expiring: [], lowStock: [] };
-    this.activeTab = 'items';
-    this.editItem = null;
-    this.showDialog = false;
+    this._activeTab = 0;
+    this._showDialog = false;
+    this._formData = this._emptyForm();
   }
 
   firstUpdated() {
-    this._loadData();
+    this._fetchItems();
   }
 
-  async _loadData() {
-    const response = await fetch('/api/pantry/data');
-    const data = await response.json();
-    this.items = Object.entries(data.items).map(([id, item]) => ({ id, ...item }));
-    this._calculateAlerts();
+  async _fetchItems() {
+    const data = await this.hass.callWS({
+      type: 'pantry/get_items'
+    });
+    this.items = data.items.map(item => ({
+      ...item,
+      expiration_dates: item.expiration_dates.sort((a, b) => new Date(a) - new Date(b))
+    }));
   }
 
-  _calculateAlerts() {
-    const now = new Date();
-    const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    
-    this.alerts = {
-      expiring: this.items.flatMap(item => 
-        item.expirations
-          .filter(date => new Date(date) < thirtyDays)
-          .map(date => ({ ...item, date }))
-      ),
-      lowStock: this.items.filter(item => item.quantity < item.min_quantity)
-    };
-  }
-
-  _openEditDialog(item = null) {
-    this.editItem = item ? { ...item } : {
+  _emptyForm() {
+    return {
       name: '',
       quantity: 0,
       min_quantity: 0,
-      expirations: []
+      expiration_dates: []
     };
-    this.showDialog = true;
   }
 
-  render() {
-    return html`
-      <div class="container">
-        <div class="tabs">
-          <button @click=${() => this.activeTab = 'items'} ?active=${this.activeTab === 'items'}>
-            All Items
-          </button>
-          <button @click=${() => this.activeTab = 'alerts'} ?active=${this.activeTab === 'alerts'}>
-            Alerts (${this.alerts.expiring.length + this.alerts.lowStock.length})
-          </button>
-        </div>
-
-        ${this.activeTab === 'items' ? this._renderItems() : this._renderAlerts()}
-        
-        <mwc-fab class="fab" icon="add" @click=${() => this._openEditDialog()}></mwc-fab>
-        
-        ${this.showDialog ? this._renderEditDialog() : ''}
-      </div>
-    `;
+  _openDialog(type, index = -1) {
+    this._dialogType = type;
+    this._editIndex = index;
+    this._formData = index >= 0 ? { ...this.items[index] } : this._emptyForm();
+    this._showDialog = true;
   }
 
-  _renderItems() {
-    return html`
-      <div class="grid">
-        ${this.items.map(item => html`
-          <div class="card">
-            <h3>${item.name}</h3>
-            <div>Quantity: ${item.quantity}/${item.min_quantity}</div>
-            <div class="expiration-list">
-              ${item.expirations.map(date => html`
-                <div>${formatDate(date)}</div>
-              `)}
-            </div>
-            <div class="actions">
-              <mwc-icon-button icon="edit" @click=${() => this._openEditDialog(item)}></mwc-icon-button>
-              <mwc-icon-button icon="delete" @click=${() => this._deleteItem(item.id)}></mwc-icon-button>
-            </div>
-          </div>
-        `)}
-      </div>
-    `;
-  }
-
-  async _deleteItem(itemId) {
-    await fetch('/api/services/pantry/delete_item', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemId })
-    });
-    this._loadData();
-  }
-
-  _renderEditDialog() {
-    return html`
-      <mwc-dialog open>
-        <div class="dialog-content">
-          <mwc-textfield label="Name" .value=${this.editItem.name}></mwc-textfield>
-          <mwc-textfield label="Quantity" type="number" .value=${this.editItem.quantity}></mwc-textfield>
-          <mwc-textfield label="Min Quantity" type="number" .value=${this.editItem.min_quantity}></mwc-textfield>
-          <div class="expiration-dates">
-            ${this.editItem.expirations.map((date, index) => html`
-              <div>
-                <input type="date" .value=${date}>
-                <mwc-icon-button icon="delete" @click=${() => this._removeDate(index)}></mwc-icon-button>
-              </div>
-            `)}
-            <mwc-button @click=${this._addDate}>Add Expiration Date</mwc-button>
-          </div>
-        </div>
-        <mwc-button slot="primaryAction" @click=${this._saveItem}>Save</mwc-button>
-        <mwc-button slot="secondaryAction" @click=${() => this.showDialog = false}>Cancel</mwc-button>
-      </mwc-dialog>
-    `;
-  }
-
-  _addDate() {
-    this.editItem.expirations = [...this.editItem.expirations, new Date().toISOString().split('T')[0]];
-    this.requestUpdate();
-  }
-
-  _removeDate(index) {
-    this.editItem.expirations.splice(index, 1);
-    this.requestUpdate();
+  _closeDialog() {
+    this._showDialog = false;
+    this._formData = this._emptyForm();
   }
 
   async _saveItem() {
-    const service = this.editItem.id ? 'update_item' : 'add_item';
-    const data = {
-      ...this.editItem,
-      expirations: this.editItem.expirations
-    };
-    
-    if (this.editItem.id) data.item_id = this.editItem.id;
-    
-    await fetch(`/api/services/pantry/${service}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+    try {
+      if (this._dialogType === 'add') {
+        await this.hass.callService('pantry', 'add_item', this._formData);
+      } else {
+        await this.hass.callService('pantry', 'update_item', {
+          item_id: this._editIndex,
+          item: this._formData
+        });
+      }
+      this._closeDialog();
+      await this._fetchItems();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  }
+
+  async _deleteItem(index) {
+    if (confirm('Are you sure you want to delete this item?')) {
+      await this.hass.callService('pantry', 'delete_item', { item_id: index });
+      await this._fetchItems();
+    }
+  }
+
+  _renderDialog() {
+    return html`
+      <md-dialog open ?hidden=${!this._showDialog}>
+        <div slot="headline">${this._dialogType === 'add' ? 'Add' : 'Edit'} Item</div>
+        
+        <div slot="content">
+          <md-outlined-text-field
+            label="Name"
+            .value=${this._formData.name}
+            @input=${e => this._formData.name = e.target.value}
+          ></md-outlined-text-field>
+          
+          <md-outlined-text-field
+            label="Quantity"
+            type="number"
+            .value=${this._formData.quantity}
+            @input=${e => this._formData.quantity = parseInt(e.target.value)}
+          ></md-outlined-text-field>
+          
+          <md-outlined-text-field
+            label="Minimum Quantity"
+            type="number"
+            .value=${this._formData.min_quantity}
+            @input=${e => this._formData.min_quantity = parseInt(e.target.value)}
+          ></md-outlined-text-field>
+          
+          <date-picker
+            multiple
+            .value=${this._formData.expiration_dates}
+            @change=${e => this._formData.expiration_dates = e.target.value}
+          ></date-picker>
+        </div>
+        
+        <div slot="actions">
+          <md-text-button @click=${this._closeDialog}>Cancel</md-text-button>
+          <md-text-button @click=${this._saveItem}>Save</md-text-button>
+        </div>
+      </md-dialog>
+    `;
+  }
+
+  _renderItem(item, index) {
+    const lowStock = item.quantity < item.min_quantity;
+    const expiringSoon = item.expiration_dates.some(date => {
+      const diffDays = Math.ceil((new Date(date) - new Date()) / (1000 * 60 * 60 * 24));
+      return diffDays <= 30;
     });
-    
-    this.showDialog = false;
-    this._loadData();
+
+    return html`
+      <div class="item-card">
+        <h3>${item.name}</h3>
+        <div class=${lowStock ? 'warning' : ''}>
+          Quantity: ${item.quantity}/${item.min_quantity}
+        </div>
+        <div class="expiration-dates">
+          ${item.expiration_dates.map(date => html`
+            <div class="date ${this._isExpiringSoon(date) ? 'warning' : ''}">
+              ${new Date(date).toLocaleDateString()}
+            </div>
+          `)}
+        </div>
+        <div class="actions">
+          <md-text-button @click=${() => this._openDialog('edit', index)}>
+            Edit
+          </md-text-button>
+          <md-text-button class="delete" @click=${() => this._deleteItem(index)}>
+            Delete
+          </md-text-button>
+        </div>
+      </div>
+    `;
+  }
+
+  _isExpiringSoon(date) {
+    const diffDays = Math.ceil((new Date(date) - new Date()) / (1000 * 60 * 60 * 24));
+    return diffDays <= 30;
+  }
+
+  render() {
+    const filteredItems = this.items.filter(item => {
+      if (this._activeTab === 1) { // Expiring Soon
+        return item.expiration_dates.some(date => this._isExpiringSoon(date));
+      }
+      if (this._activeTab === 2) { // Low Stock
+        return item.quantity < item.min_quantity;
+      }
+      return true;
+    });
+
+    return html`
+      <div class="header">
+        <h1>Pantry Management</h1>
+        <md-text-button @click=${() => this._openDialog('add')}>
+          Add Item
+        </md-text-button>
+      </div>
+
+      <md-tabs @change=${e => this._activeTab = e.detail.activeTabIndex}>
+        <md-tab>All Items</md-tab>
+        <md-tab>Expiring Soon</md-tab>
+        <md-tab>Low Stock</md-tab>
+      </md-tabs>
+
+      <div class="container">
+        ${filteredItems.map((item, index) => this._renderItem(item, index))}
+      </div>
+
+      ${this._renderDialog()}
+    `;
   }
 }
 

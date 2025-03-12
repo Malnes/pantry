@@ -1,45 +1,71 @@
 add_item:
-  description: Add new pantry item
+  name: Add Item
+  description: Add a new pantry item
   fields:
     name:
-      description: Item name
-      required: true
+      description: Name of the item
       example: Canned Beans
-    quantity:
-      description: Current quantity
       required: true
+      selector:
+        text:
+    quantity:
+      description: Current quantity in stock
       example: 5
+      required: true
+      selector:
+        number:
+          min: 0
+          step: 1
     min_quantity:
       description: Minimum required quantity
-      required: true
       example: 3
-    expirations:
+      required: true
+      selector:
+        number:
+          min: 0
+          step: 1
+    expiration_dates:
       description: List of expiration dates (YYYY-MM-DD)
       required: false
-      example: ["2024-12-31", "2025-01-15"]
+      default: []
+      selector:
+        date:
+          multiple: true
 
 update_item:
-  description: Update existing item
+  name: Update Item
+  description: Update an existing pantry item
   fields:
     item_id:
-      description: Unique item ID
+      description: Index of the item to update
       required: true
-    name:
-      description: New name
-      required: false
-    quantity:
-      description: New quantity
-      required: false
-    min_quantity:
-      description: New minimum quantity
-      required: false
-    expirations:
-      description: New list of expiration dates
-      required: false
+      selector:
+        number:
+          min: 0
+          step: 1
+    item:
+      description: New item data
+      required: true
+      selector:
+        object:
+          fields:
+            name: 
+              selector: { text: {} }
+            quantity: 
+              selector: { number: { min: 0, step: 1 } }
+            min_quantity: 
+              selector: { number: { min: 0, step: 1 } }
+            expiration_dates:
+              selector: { date: { multiple: true } }
 
 delete_item:
-  description: Delete an item
+  name: Delete Item
+  description: Delete an item from the pantry
   fields:
     item_id:
-      description: Item ID to delete
+      description: Index of the item to delete
       required: true
+      selector:
+        number:
+          min: 0
+          step: 1

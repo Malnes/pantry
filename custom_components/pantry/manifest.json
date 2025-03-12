@@ -1,12 +1,14 @@
 {
-    "domain": "pantry",
-    "name": "Pantry",
-    "version": "1.0.0",
-    "config_flow": false,
-    "requirements": [],
-    "dependencies": [],
-    "codeowners": ["@your_github_username"],
-    "iot_class": "local_polling",
-    "panel_icon": "mdi:food-drumstick",
-    "extra_html": ["/local/pantry-panel.js"]
-  }
+  "domain": "pantry",
+  "name": "Pantry",
+  "version": "1.0.0",
+  "config_flow": true,
+  "documentation": "https://github.com/yourusername/hacs-pantry",
+  "issue_tracker": "https://github.com/yourusername/hacs-pantry/issues",
+  "codeowners": ["@yourusername"],
+  "requirements": [],
+  "iot_class": "local_push",
+  "storage": ["pantry.json"],
+  "panel": "js",
+  "frontend": ["/frontend/dist/pantry-panel.js"]
+}
