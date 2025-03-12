@@ -1,0 +1,6 @@
+{
+    "name": "Pantry",
+    "render_readme": true,
+    "domains": ["pantry"],
+    "homeassistant": "2024.1.0"
+  }

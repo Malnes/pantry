@@ -1,0 +1,28 @@
+:host {
+    --primary-color: #2196F3;
+    --error-color: #f44336;
+    --card-background: #ffffff;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    :host {
+      --card-background: #2d2d2d;
+    }
+  }
+  
+  .card {
+    background: var(--card-background);
+    transition: box-shadow 0.3s;
+  }
+  
+  .card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+  
+  .alert-badge {
+    background: var(--error-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+  }

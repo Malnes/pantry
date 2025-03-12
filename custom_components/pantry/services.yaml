@@ -1,0 +1,45 @@
+add_item:
+  description: Add new pantry item
+  fields:
+    name:
+      description: Item name
+      required: true
+      example: Canned Beans
+    quantity:
+      description: Current quantity
+      required: true
+      example: 5
+    min_quantity:
+      description: Minimum required quantity
+      required: true
+      example: 3
+    expirations:
+      description: List of expiration dates (YYYY-MM-DD)
+      required: false
+      example: ["2024-12-31", "2025-01-15"]
+
+update_item:
+  description: Update existing item
+  fields:
+    item_id:
+      description: Unique item ID
+      required: true
+    name:
+      description: New name
+      required: false
+    quantity:
+      description: New quantity
+      required: false
+    min_quantity:
+      description: New minimum quantity
+      required: false
+    expirations:
+      description: New list of expiration dates
+      required: false
+
+delete_item:
+  description: Delete an item
+  fields:
+    item_id:
+      description: Item ID to delete
+      required: true

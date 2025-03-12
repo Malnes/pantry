@@ -1,30 +1,20 @@
-import os
-import json
 import logging
-
-from homeassistant.core import HomeAssistant
+from homeassistant.helpers.storage import Store
+from .const import DOMAIN, STORAGE_KEY, STORAGE_VERSION
 
 _LOGGER = logging.getLogger(__name__)
-DATA_FILE = "pantry_data.json"
 
-def get_data_file_path(hass: HomeAssistant):
-    return hass.config.path(DATA_FILE)
+class PantryStorage:
+    def __init__(self, hass):
+        self.hass = hass
+        self.store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+        self.data = {}
 
-def load_data(hass: HomeAssistant):
-    file_path = get_data_file_path(hass)
-    if not os.path.exists(file_path):
-        data = {"items": []}
-        save_data(hass, data)
-    else:
-        try:
-            with open(file_path, "r") as f:
-                data = json.load(f)
-        except Exception as e:
-            _LOGGER.error("Error loading pantry data: %s", e)
-            data = {"items": []}
-    return data
+    async def async_load_data(self):
+        if not self.data:
+            data = await self.store.async_load()
+            self.data = data if data else {"items": {}}
+        return self.data
 
-def save_data(hass: HomeAssistant, data):
-    file_path = get_data_file_path(hass)
-    with open(file_path, "w") as f:
-        json.dump(data, f)
+    async def async_save_data(self):
+        await self.store.async_save(self.data)

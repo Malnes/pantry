@@ -1,10 +1,12 @@
 {
-  "domain": "pantry",
-  "name": "Pantry",
-  "version": "1.0.7",
-  "documentation": "https://github.com/your_username/pantry",
-  "dependencies": [],
-  "codeowners": ["@your_username"],
-  "requirements": [],
-  "config_flow": true
-}
+    "domain": "pantry",
+    "name": "Pantry",
+    "version": "1.0.0",
+    "config_flow": false,
+    "requirements": [],
+    "dependencies": [],
+    "codeowners": ["@your_github_username"],
+    "iot_class": "local_polling",
+    "panel_icon": "mdi:food-drumstick",
+    "extra_html": ["/local/pantry-panel.js"]
+  }
