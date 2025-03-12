@@ -4,6 +4,7 @@ from .const import DOMAIN
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
+    MINOR_VERSION = 7
 
     async def async_step_user(self, user_input=None):
         if user_input is not None:
